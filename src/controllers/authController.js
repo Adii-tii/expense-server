@@ -1,8 +1,8 @@
-const users = require("../dao/userDb");
+const userDao = require("../dao/userDao");
 
 //because passwords are sensitive information we wont send them as params. sensitive info majorly travels as body of the req
 const authController = {
-    register : (req,res) => {
+    register : async(req,res) => {
         const {name, email, password} = req.body;
 
     if(!name || !email || !password){
@@ -10,30 +10,32 @@ const authController = {
             messages: 'Name, email and password are required!'
         })
     }
-    else if(users.some(user => user.email === email)){ //Determines whether the specified callback function returns true for any element of an array.
-
-        return res.status(400).json({
-            message: 'User with this email already exists.'
-        })
-    } 
-
-    const user = {
+    
+    await userDao.create({
         name : name,
         email : email,
         password : password
-    }
-    
-    users.push(user);
-    console.log(user);
-    res.status(200).json({
-        "message" : "User registered",
-        "user" : {
-            "id" : users.length + 1
+    }).then(u => {
+        console.log(u);
+        return res.status(200).json({
+            message: "successfuly registered!",
+            id : u._id
+        });   
+    })
+    .catch((error)=> {
+        if(error.code === 'USER_EXISTS'){
+            return res.status(400).json({
+                message: "User with this email already exists! Try loggin in."
+            })
+        }else{
+            return res.status(500).json({
+                message: "internal server error!"
+            })
         }
     })
     },
 
-    login: (req,res) => {
+    login: async (req,res) => {
         const { email, password } = req.body;
 
     if (!email || !password) {
@@ -42,8 +44,8 @@ const authController = {
         });
     }
 
-    const user = users.find(user => user.email === email);
-
+    const user = await userDao.findByEmail(email);
+    
     if (!user) {
         return res.status(400).json({
             message: `User with email ${email} not found`
