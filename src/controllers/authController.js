@@ -1,4 +1,5 @@
 const userDao = require("../dao/userDao");
+const bcrypt = require("bcrypt");
 
 //because passwords are sensitive information we wont send them as params. sensitive info majorly travels as body of the req
 const authController = {
@@ -11,10 +12,13 @@ const authController = {
         })
     }
     
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     await userDao.create({
         name : name,
         email : email,
-        password : password
+        password : hashedPassword
     }).then(u => {
         console.log(u);
         return res.status(200).json({
@@ -45,14 +49,14 @@ const authController = {
     }
 
     const user = await userDao.findByEmail(email);
-    
     if (!user) {
         return res.status(400).json({
             message: `User with email ${email} not found`
         });
     }
 
-    if (user.password !== password) {
+
+    if (!bcrypt.compare(password, user.password)) {
         return res.status(400).json({
             message: "Incorrect password"
         });
