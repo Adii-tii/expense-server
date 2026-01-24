@@ -54,3 +54,10 @@ controllers : entry point of the business logic. objects comprising of business 
 const users = {login : login_function , register: register_function}
 routes : valid paths.
 dao : data access object
+
+## Mongoose
+used to define schemas
+
+## async functions
+non blocking functions suitable for fetching data etc in node env (single threaded env)
+Event driven approach : halt
