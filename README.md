@@ -1,7 +1,3 @@
-Here is a **clean, logically grouped, exam-ready and project-ready version** of your notes, with **proper numbering and flow**, starting from fundamentals → server flow → architecture → databases → async model.
-
----
-
 # Expense Server – Structured Notes
 
 ---
