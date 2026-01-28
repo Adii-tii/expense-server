@@ -268,3 +268,11 @@ DAO
 Database
 ```
 
+
+##JSON Web token :
+
+sessions : memory stored on servers. but wiht microservice arch both client and server can run on different servers. 
+stateful sesh management.
+library
+
+they are statelss token. tge lib's sign method takes three imp params : secret(random string), data(user email, mame pass permissions etc) and expiry time. the expiry time differs depending on the use case.
