@@ -1,5 +1,6 @@
 const userDao = require("../dao/userDao");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken")
 
 //because passwords are sensitive information we wont send them as params. sensitive info majorly travels as body of the req
 const authController = {
@@ -61,6 +62,22 @@ const authController = {
             message: "Incorrect password"
         });
     }
+
+    const token = jwt.sign({ //creating a token using .sign() method
+        name: user.name,
+        email: user.email,
+        id: user._id
+    }, process.env.JWT_SECRET, {
+        expiresIn: '1h'
+    })
+
+    res.cookie('jwtToken', token, { //attaching the jwt token to the response cookies
+        httpOnly: true, 
+        secure: true,
+        domain: "localhost",
+        path: '/',
+        maxAge: 60*60
+    });
 
     return res.status(200).json({
         message: "Successfully logged in"
