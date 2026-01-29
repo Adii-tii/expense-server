@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express'); //legacy way of importing
 const mongoose = require('mongoose');
+const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const authRoutes = require('./src/routes/authRoutes');
 const groupRoutes = require('./src/routes/groupRoutes');
@@ -14,6 +15,13 @@ mongoose.connect(process.env.MONGO_DB_CONNECTION_URL)
     .then(() => console.log("connection established successfully!"))
     .catch((error) => console.log("failed to establish connection"));
 
+
+const corsOption = {
+    orgin: process.env.CLIENT_URL,
+    credentials: true
+}
+
+app.use(cors(corsOption));
 app.use(express.json()); 
 app.use(cookieParser());
 
