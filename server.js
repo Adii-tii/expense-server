@@ -17,7 +17,7 @@ mongoose.connect(process.env.MONGO_DB_CONNECTION_URL)
 
 
 const corsOption = {
-    orgin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL,
     credentials: true
 }
 
