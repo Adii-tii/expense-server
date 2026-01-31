@@ -7,5 +7,9 @@ router.post('/register', authController.register)
 // in middlewares we dont define paths and let the function run for every incoming req.
 
 router.post('/login', authController.login);
-
+router.get('/logout', authController.logout);
+router.get('/is-logged-in', authController.isLoggedIn);
+router.post('/google-auth', authController.googleSso);
+router.post('/valid-login', authController.hasPassword);
+    
 module.exports = router;
