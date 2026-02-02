@@ -15,7 +15,18 @@ const userSchema = new mongoose.Schema({ //defining user schema
     },
     googleId: {
         type: String,
-    }
+    },
+    code: {
+        type: String,
+    },
+    code: {
+        type: String,
+        default: null
+    },
+    codeExpiresAt: {
+        type: Date,
+        default: null
+    }, 
 })
 
 
