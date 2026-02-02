@@ -11,5 +11,8 @@ router.get('/logout', authController.logout);
 router.get('/is-logged-in', authController.isLoggedIn);
 router.post('/google-auth', authController.googleSso);
 router.post('/valid-login', authController.hasPassword);
+router.post('/generate-code', authController.generateCode);
+router.post('/verify-code', authController.verifyCode);
+router.post('/reset-password', authController.resetPassword);
     
 module.exports = router;
