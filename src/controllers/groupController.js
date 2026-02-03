@@ -1,6 +1,5 @@
 const groupDao = require("../dao/groupDao");
 const Group = require("../models/group");
-const User = require("../models/User");
 
 const groupController = {
     create: async (req, res) => {
@@ -42,7 +41,7 @@ const groupController = {
         }   
     },
 
-    updateDetails: async(req, res) => {  
+    update: async(req, res) => {  
         try{
             const { groupId } = req.params;
 
@@ -86,7 +85,41 @@ const groupController = {
         
     },
 
-    getMyGroups: async(req, res) => {
+    addMembers:  async(req, res) => {
+        try{
+            const {groupId, emails} = req.body;
+            const updatedGroup = groupDao.addMembers(groupId,emails);
+
+            return res.status(200).json({
+                message: "Members added successfully",
+                group: updatedGroup
+            });
+        } catch(error){
+            console.log(error);
+            return res.status(500).json({
+                message: "Internal server error!"
+            })
+        }
+    },
+
+    removeMembers: async(req, res) => {
+        const {groupId, emails} = req.body;
+
+        try{
+            const updatedGroup = await groupDao.removeMembers(groupId, emails);
+            return res.status(200).json({
+                message: "Members removed successfully",
+                group: updatedGroup
+            });
+        }   catch (error){
+            console.log(error);
+            return res.status(500).json({
+                message: "Internal server error!"
+            })
+        } 
+    },  
+
+    getGroupsByUser: async(req, res) => {
         try{
             const email = req.user.email;
 

@@ -26,7 +26,7 @@ const groupDao = {
                     memberEmail: { $each: membersEmail }
                 }
             },
-            { new: true }
+            { new: true }   
         );
     },
 
