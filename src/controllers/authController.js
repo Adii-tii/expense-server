@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken")
 const { OAuth2Client } = require("google-auth-library");
 const otpGenerator = require('otp-generator');
 const emailService = require("../services/emailService");
+const {validationResult} = require("express-validator");
 
 
 //because passwords are sensitive information we wont send them as params. sensitive info majorly travels as body of the req
@@ -13,21 +14,20 @@ const authController = {
     register : async(req,res) => {
         const {username, email, password} = req.body;
 
-    if(!username || !email || !password){
-        return res.status(400).json({
-            messages: 'Name, email and password are required!'
-        })
-    }
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
     
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-    await userDao.create({
-        username : username,
-        email : email,
-        password : hashedPassword
-    }).then(u => {
-        console.log(u);
+        await userDao.create({
+            username : username,
+            email : email,
+            password : hashedPassword
+        }).then(u => {
+            console.log(u);
 
         const token = jwt.sign({ //creating a token using .sign() method
             username: u.username,
@@ -66,10 +66,9 @@ const authController = {
     login: async (req,res) => {
         const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({
-            message: "Email and password required to log in"
-        });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
 
     const user = await userDao.findByEmail(email);
@@ -95,11 +94,26 @@ const authController = {
         expiresIn: '1h'
     })
 
+    const refreshToken = jwt.sign({
+        username: user.username,
+        email: user.email,
+        id: user._id
+    }, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: '7d' //refresh token valid for 7 days
+    })
+
     res.cookie('jwt', token, { //attaching the jwt token to the response cookies
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",
         path: '/',
-        maxAge: 60*60*1000
+        maxAge: 60*60*1000 // 1 hour
+    });
+
+    res.cookie('refreshJwt', refreshToken, { //attaching the refresh token to the response cookies
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        path: '/',
+        maxAge: 7*24*60*60*1000 // 7 days
     });
 
     return res.status(200).json({
@@ -109,7 +123,7 @@ const authController = {
     });
     },
 
-    isLoggedIn: async(req, res) => {
+    getUser: async(req, res) => {
         try{
             const token = req.cookies?.jwt
             
@@ -125,6 +139,7 @@ const authController = {
                         message: 'Invalid token'
                     })}
                 else{
+                    console.log("user from token: ", user);
                         return res.json({
                             user:user
                         })
@@ -243,7 +258,7 @@ const authController = {
         }
     },
 
-    generateCode: async(req, res) => {
+    generateCode: async(req, res) => { //using otp-generator package
         try{
             const {email} = req.body;
 
@@ -268,7 +283,7 @@ const authController = {
                 specialChars: false});
 
             user.code = code;
-            user.codeExpiresAt = Date.now() + 5*60*1000;
+            user.codeExpiresAt = Date.now() + 5*60*1000; //setting the expiry time for 5 minutes from now
             await user.save();
 
             await emailService.send(email,"Password Reset Code",
@@ -301,7 +316,7 @@ const authController = {
                 })
             }
 
-            if(user.codeExpiresAt < Date.now()){
+            if(user.codeExpiresAt < Date.now()){ //checking if code has expired
                 return res.status(404).json({
                     message: "Code has expired"
                 })
