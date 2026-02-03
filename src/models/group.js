@@ -13,7 +13,7 @@ const groupSchema = new mongoose.Schema({
             currency: String,
             date: Date,
             isPaid: Boolean,
-            default: "nothing to show"
+            
     }
 });
 

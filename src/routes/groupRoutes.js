@@ -14,13 +14,13 @@ router.post(
 router.patch(
     "/:groupId",
     authMiddleware.protect,
-    groupController.updateDetails
+    groupController.update
 );
 
 router.get(
-    "/my",
+    "/user-groups",
     authMiddleware.protect,
-    groupController.getMyGroups
+    groupController.getGroupsByUser
 );
 
 router.get(
