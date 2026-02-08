@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const Group = require("../models/group");
+
 
 const expenseSchema = new mongoose.Schema({
     groupId: {
@@ -17,10 +19,9 @@ const expenseSchema = new mongoose.Schema({
         default: "INR"
     },
 
-    splitType: {
-        type: String,
-        enum: ["equal", "percentage", "exact"],
-        default: "equal"
+    amount: {
+        type: Number,
+        required: true
     },
 
     members: [
@@ -32,22 +33,35 @@ const expenseSchema = new mongoose.Schema({
             share: {
                 type: Number,
                 required: true
-            },            
+            },
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            }
         }
     ],
 
     paidBy: {
-        type: String, // email for now
+        type: [],
         required: true
     },
 
-    status: {
-        type:String,
-        default: false,
+
+    splitType: {
+        type: String,
+        enum: ["equal", "unequal", "share", "custom"],
+        default: "equal"
     },
 
-    thumbnail: {
-        type: String
+    status: {
+        type: String,
+        enum: ["pending", "partial", "settled"],
+        default: "pending",
+    },
+
+    isSettled: {
+        type: Boolean,
+        default: false
     },
 
     createdAt: {
