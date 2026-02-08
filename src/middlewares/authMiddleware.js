@@ -5,7 +5,7 @@ const authMiddleware = {
         console.log("AUTH MIDDLEWARE HIT");
 
         try {
-            const token = req.cookies?.jwtToken;
+            const token = req.cookies?.jwt;
             console.log("inside try");
 
             if (!token) {

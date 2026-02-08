@@ -30,6 +30,12 @@ const groupDao = {
         );
     },
 
+    deleteGroup: async(groupId) => {
+        return await Group.findByIdAndDelete(
+            groupId
+        )
+    },
+
     removeMembers: async (groupId, membersEmail) => {
         return await Group.findByIdAndUpdate(
             groupId,
@@ -40,6 +46,10 @@ const groupDao = {
             },
             { new: true }
         );
+    },
+
+    getGroupById : async(groupId) => {
+        return await Group.findById(groupId);
     },
 
     getGroupByEmail: async (email) => {

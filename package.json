@@ -23,10 +23,15 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-validator": "^7.3.1",
+    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.18.1",
+    "nodemailer": "^7.0.13",
+    "otp-generator": "^4.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

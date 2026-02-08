@@ -6,6 +6,7 @@ const groupSchema = new mongoose.Schema({
     adminEmail: {type:String, required: true},
     createdAt: {type: Date, default: Date.now(), required: true},
     memberEmail: [String],
+    category: [String],
     thumbnail: {type: String, required: false},
     paymentStatus:
         {

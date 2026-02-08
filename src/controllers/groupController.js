@@ -119,9 +119,37 @@ const groupController = {
         } 
     },  
 
+    deleteGroup : async(req, res) => {
+        try{
+            console.log("code is here")
+            const email = req.user.email;
+            const {groupId} = req.params.groupId
+            console.log(groupId);
+
+            const group = await groupDao.getGroupById(groupId);
+            
+            if(!group){
+                return res.status(400).json({
+                    message: "Group not found in the database!"
+                })
+            }
+            await groupDao.deleteGroup(_id);
+
+            return res.status(200).json({
+                message: "Removed group successfully"
+            });
+
+        } catch(error){
+            return res.status(500).json({
+                message: "Internal server error meh!"
+            })
+        }
+    },
+
     getGroupsByUser: async(req, res) => {
         try{
             const email = req.user.email;
+            console.log("this is the email", email);
 
             const groups = await groupDao.getGroupByEmail(email);
 
