@@ -15,7 +15,13 @@ const groupSchema = new mongoose.Schema({
             date: Date,
             isPaid: Boolean,
             
+    },
+    createdBy: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'User', 
+            index: true 
     }
+
 });
 
 module.exports = mongoose.model('Group', groupSchema);

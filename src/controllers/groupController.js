@@ -25,7 +25,8 @@ const groupController = {
                     currency: 'INR',
                     date: Date.now(),
                     isPaid: false
-                }
+                },
+                createdBy: user.id
             });
 
             return res.status(201).json({
@@ -123,17 +124,17 @@ const groupController = {
         try{
             console.log("code is here")
             const email = req.user.email;
-            const {groupId} = req.params.groupId
+            const {groupId} = req.params
             console.log(groupId);
 
             const group = await groupDao.getGroupById(groupId);
             
             if(!group){
-                return res.status(400).json({
+                return res.status(404).json({
                     message: "Group not found in the database!"
                 })
             }
-            await groupDao.deleteGroup(_id);
+            await groupDao.deleteGroup(groupId);
 
             return res.status(200).json({
                 message: "Removed group successfully"
@@ -148,10 +149,10 @@ const groupController = {
 
     getGroupsByUser: async(req, res) => {
         try{
-            const email = req.user.email;
-            console.log("this is the email", email);
+            const createdBy = req.user.adminId;
+            console.log("this is the adminId", createdBy);
 
-            const groups = await groupDao.getGroupByEmail(email);
+            const groups = await groupDao.getGroupsByCreatedById(createdBy);
 
             if(groups.length == 0){
                 return res.status(404).json({
@@ -161,7 +162,7 @@ const groupController = {
 
             return res.status(200).json({
                 message: "All groups fetched successfully!",
-                groups
+                groups  
             })
             
         } catch (error){

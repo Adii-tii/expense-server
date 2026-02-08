@@ -14,10 +14,14 @@ const authMiddleware = {
                 });
             }
 
+            console.log("completed ", req.user);
+
+
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             req.user = decoded;
 
+            console.log("completed ", req.user);
             next();
 
         } catch (error) {

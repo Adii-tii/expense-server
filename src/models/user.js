@@ -18,15 +18,21 @@ const userSchema = new mongoose.Schema({ //defining user schema
     },
     code: {
         type: String,
-    },
-    code: {
-        type: String,
         default: null
     },
     codeExpiresAt: {
         type: Date,
         default: null
-    }, 
+    },
+    role:{
+        type:String,
+    },
+    adminId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        index: true 
+    }
+
 })
 
 

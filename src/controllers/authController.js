@@ -7,6 +7,7 @@ const { OAuth2Client } = require("google-auth-library");
 const otpGenerator = require('otp-generator');
 const emailService = require("../services/emailService");
 const {validationResult} = require("express-validator");
+const {ADMIN_ROLE} = require("../utility/userRoles")
 
 
 //because passwords are sensitive information we wont send them as params. sensitive info majorly travels as body of the req
@@ -25,7 +26,8 @@ const authController = {
         await userDao.create({
             username : username,
             email : email,
-            password : hashedPassword
+            password : hashedPassword,
+            role: ADMIN_ROLE
         }).then(u => {
             console.log(u);
 
@@ -78,6 +80,16 @@ const authController = {
         });
     }
 
+    user.role = user.role? user.role : ADMIN_ROLE;
+    
+    user.adminId = user.adminId? user.adminId: user.id;
+    await user.save();
+
+    const userUpdated = await userDao.findByEmail(user.id);
+
+    console.log("upadted userr is here !!! " + userUpdated);
+
+    
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -89,7 +101,9 @@ const authController = {
     const token = jwt.sign({ //creating a token using .sign() method
         username: user.username,
         email: user.email,
-        id: user._id
+        id: user._id,
+        role: user.role? user.role : ADMIN_ROLE,
+        adminId: user.adminId? user.adminId : user.id
     }, process.env.JWT_SECRET, {
         expiresIn: '1h'
     })

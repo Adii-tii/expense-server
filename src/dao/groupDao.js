@@ -62,6 +62,10 @@ const groupDao = {
 
     getAuditLog: async (groupId) => {
         return await auditLogs.find({groupId}).sort({createdAt: -1});
+    },
+
+    getGroupsByCreatedById : async(createdBy) => {
+        return await Group.find({createdBy}).select("-password");
     }
 
 };
