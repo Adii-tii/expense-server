@@ -64,6 +64,11 @@ const expenseSchema = new mongoose.Schema({
         default: false
     },
 
+
+    updatedAt: {
+        type: Date,
+    }, 
+
     createdAt: {
         type: Date,
         default: Date.now

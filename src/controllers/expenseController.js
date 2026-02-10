@@ -16,7 +16,7 @@ const expenseController = {
                 splitType,
             } = req.body;
 
-            if(!title || !amount || !paidBy || !splitType || !groupId){
+            if (!title || !amount || !paidBy || !splitType || !groupId) {
                 return res.status(400).json({
                     message: "Missing required fields"
                 });
@@ -36,10 +36,10 @@ const expenseController = {
 
             return res.status(201).json({
                 expense,
-                message:"Expense created successfully"
+                message: "Expense created successfully"
             });
 
-        } catch (error){
+        } catch (error) {
             console.log(error);
             return res.status(500).json({
                 message: "Internal Server Error"
@@ -47,13 +47,25 @@ const expenseController = {
         }
     },
 
-    update: async(req, res) => {
-        try{
-            const {expenseId} = req.params;
+    update: async (req, res) => {
+        try {
+            const { expenseId } = req.params;
+            const expense = await expenseDao.getExpenseById(expenseId);
 
-            
+            if (!expense) {
+                return res.status(404).json({
+                    message: "Not found"
+                })
+            }
 
-        }catch(error){
+            const { amount, title, currency, splitType, items, paidBy } = req.body;
+            const updatedExpense = await expenseDao.updateExpense({
+                expenseId, amount, title, currency, splitType, items, paidBy
+            }, { new: true });
+
+            updatedExpense.updatedAt = Date.now();
+
+        } catch (error) {
             console.log(error);
             return res.status(500).json({
                 message: "Internal server error"
@@ -61,13 +73,72 @@ const expenseController = {
         }
     },
 
-    getExpensesByGroup: async(req, res) => {
-        try{
+    addMembers: async (req, res) => {
+        try {
+            const expenseId = req.params.expenseId;
+            let expense = await expenseDao.getExpenseById(expenseId);
+            const { newMembers } = req.body;
+
+            if (!expense) {
+                return res.status(404).json({
+                    message: "Expense not found"
+                })
+            }
+
+            if (newMembers.length === 0) {
+                return res.status(400).json({
+                    message: "Nothing to add"
+                })
+            }
+
+            expense = await expenseDao.addMembers(expenseId, newMembers);
+
+            return res.status(200).json({
+                expense,
+                message: "added new members successfully"
+            })
+
+        } catch {
+            return res.status(500).json({
+                message: "Internal server error"
+            })
+        }
+    },
+
+    removeMembers: async (req, res) => {
+        try {
+            const expenseId = req.params.expenseId;
+            const { members } = req.body;
+
+            let expense = await expenseDao.getExpenseById(expenseId);
+
+            if (!expense) {
+                return res.status(404).json({
+                    message: "Expense not found"
+                })
+            }
+
+            expense = await expenseDao.removeMembers(expenseId, members);
+
+            return res.status(200).json({
+                expense,
+                message: "removed members successfully"
+            })
+
+        } catch (error) {
+            return res.status(500).json({
+                message: "Removed members successfully"
+            })
+        }
+    },
+
+    getExpensesByGroup: async (req, res) => {
+        try {
             const { groupId } = req.params;
 
             const groupExists = await groupDao.getGroupById(groupId);
 
-            if(!groupExists) {
+            if (!groupExists) {
                 return res.status(404).json({
                     message: "Group does not exist"
                 });
@@ -75,7 +146,7 @@ const expenseController = {
 
             const expenses = await expenseDao.getExpensesByGroupId(groupId);
 
-            if(expenses.length === 0){
+            if (expenses.length === 0) {
                 return res.status(200).json({
                     expenses: [],
                     message: "No expenses added yet"
@@ -87,7 +158,7 @@ const expenseController = {
                 message: "Expenses fetched successfully"
             });
 
-        } catch (error){
+        } catch (error) {
             console.log(error);
 
             return res.status(500).json({
@@ -96,9 +167,92 @@ const expenseController = {
         }
     },
 
-    
+    getExpenseByStatus: async (req, res) => {
+        try {
+            const { status } = req.query;
 
+            if (!status) {
+                return res.status(400).json({ message: "Status required" });
+            }
 
+            const expenses = await expenseDao.getExpensesByStatus(status);
+
+            return res.status(200).json({
+                expenses,
+                message: "fetched successfully"
+            })
+        } catch (error) {
+            console.log(error);
+
+            return res.status(500).json({
+                message: "internal server error"
+            })
+        }
+    },
+
+    getExpenseByUserStatus: async (req, res) => {
+        try {
+            const { userId } = req.user;
+            const  status  = req.query.status;
+            const expenses = await expenseDao.getExpensesByUserStatus(userId, status);
+
+            return res.status(200).json({
+                expenses: expenses,
+                message: "fetched expenses successfully"
+            })
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({
+                message: "Internal Server Error"
+            })
+        }
+    },
+
+    getExpensespByMembers: async (req, res) => {
+        try {
+            const { memberEmail } = req.body;
+
+            const expenses = await expenseDao.getExpensesByMemberEmail(memberEmail);
+
+            return res.status(200).json({
+                expenses,
+                message: "fetched successfully!"
+            })
+
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({
+                message: "internal server error"
+            })
+        }
+    },
+
+    delete: async (req, res) => {
+        try {
+            const expenseId = req.params.expenseId;
+
+            const expense = await expenseDao.getExpenseById(expenseId);
+            if (!expense) {
+                return res.status(404).json({
+                    message: "expense does not exist"
+                })
+            }
+
+            await expenseDao.deleteExpense(expenseId);
+
+            return res.status(200).json({
+                message: "ok"
+            })
+        } catch (error) {
+            return res.status(500).json({
+                message: "internal server error!"
+            })
+        }
+    },
+
+    updateSettlement: async(req, res) => {
+        
+    }
 
 };
 
