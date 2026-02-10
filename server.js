@@ -8,6 +8,8 @@ const authRoutes = require('./src/routes/authRoutes');
 const groupRoutes = require('./src/routes/groupRoutes');
 const rbacRoutes = require('./src/routes/rbacRoutes');
 const expenseRoutes = require('./src/routes/expenseRoutes');
+const paymentsRoutes = require('./src/routes/paymentsRoutes');
+const profileRoutes = require('./src/routes/profileRoutes');
 
 
 const app = express(); // configuring express app
@@ -31,6 +33,8 @@ app.use('/auth', authRoutes);
 app.use('/group', groupRoutes);
 app.use('/user', rbacRoutes);
 app.use('/group/:groupId/expenses', expenseRoutes); //for expense route
+app.use('/payments', paymentsRoutes);
+app.use('/profile', profileRoutes);
 
 app.post("/__routes_test", (req, res) => {
     res.send("Routes are working");
