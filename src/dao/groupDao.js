@@ -66,7 +66,24 @@ const groupDao = {
 
     getGroupsByCreatedById : async(createdBy) => {
         return await Group.find({createdBy}).select("-password");
-    }
+    },
+
+    getGroupsPaginated: async(email, limit, skip,sortOptions ={createdAt: -1}) => {
+        const [groups, totalCount] = await Promise.all([
+            Group.find({
+                memberEmail: email
+            }).sort(sortOptions)
+            .skip(skip)
+            .limit(limit),
+
+            Group.countDocuments({memberEmail:email}),
+        ])
+
+        return {groups, totalCount};
+    },
+
+    //since we have implemented pagination we do not have the entire data on the client device, we will perform sorting operations on the server itself
+
 
 };
 

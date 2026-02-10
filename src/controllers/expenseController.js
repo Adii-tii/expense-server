@@ -49,6 +49,9 @@ const expenseController = {
 
     update: async(req, res) => {
         try{
+            const {expenseId} = req.params;
+
+            
 
         }catch(error){
             console.log(error);

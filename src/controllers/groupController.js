@@ -39,23 +39,23 @@ const groupController = {
             return res.status(500).json({
                 message: "Internal server error"
             });
-        }   
+        }
     },
 
-    update: async(req, res) => {  
-        try{
+    update: async (req, res) => {
+        try {
             const { groupId } = req.params;
 
-            const{name, adminEmail, description, thumbnail} = req.body;
+            const { name, adminEmail, description, thumbnail } = req.body;
             const group = await Group.findById(groupId);
 
-            if(!group){
+            if (!group) {
                 return res.status(404).json({
                     message: "group not found!"
                 });
             }
 
-            if(group.adminEmail != req.user.email){
+            if (group.adminEmail != req.user.email) {
                 return res.status(403).json({
                     message: "Only admin can edit group details"
                 })
@@ -63,10 +63,10 @@ const groupController = {
 
             const updatedData = {};
 
-            if(name) updatedData.name = name;
-            if(thumbnail) updatedData.thumbnail = thumbnail;
-            if(adminEmail) updatedData.adminEmail = adminEmail;
-            if(description) updatedData.description = description;
+            if (name) updatedData.name = name;
+            if (thumbnail) updatedData.thumbnail = thumbnail;
+            if (adminEmail) updatedData.adminEmail = adminEmail;
+            if (description) updatedData.description = description;
 
             const updatedGroup = await groupDao.updateGroup({
                 groupId,
@@ -77,25 +77,25 @@ const groupController = {
                 message: "group details updated successfully",
                 group: updatedGroup
             })
-        } catch (error){
+        } catch (error) {
             console.log(error);
             return res.status(500).json({
                 message: "internal server error!"
             })
         }
-        
+
     },
 
-    addMembers:  async(req, res) => {
-        try{
-            const {groupId, emails} = req.body;
-            const updatedGroup = groupDao.addMembers(groupId,emails);
+    addMembers: async (req, res) => {
+        try {
+            const { groupId, emails } = req.body;
+            const updatedGroup = groupDao.addMembers(groupId, emails);
 
             return res.status(200).json({
                 message: "Members added successfully",
                 group: updatedGroup
             });
-        } catch(error){
+        } catch (error) {
             console.log(error);
             return res.status(500).json({
                 message: "Internal server error!"
@@ -103,33 +103,33 @@ const groupController = {
         }
     },
 
-    removeMembers: async(req, res) => {
-        const {groupId, emails} = req.body;
+    removeMembers: async (req, res) => {
+        const { groupId, emails } = req.body;
 
-        try{
+        try {
             const updatedGroup = await groupDao.removeMembers(groupId, emails);
             return res.status(200).json({
                 message: "Members removed successfully",
                 group: updatedGroup
             });
-        }   catch (error){
+        } catch (error) {
             console.log(error);
             return res.status(500).json({
                 message: "Internal server error!"
             })
-        } 
-    },  
+        }
+    },
 
-    deleteGroup : async(req, res) => {
-        try{
+    deleteGroup: async (req, res) => {
+        try {
             console.log("code is here")
             const email = req.user.email;
-            const {groupId} = req.params
+            const { groupId } = req.params
             console.log(groupId);
 
             const group = await groupDao.getGroupById(groupId);
-            
-            if(!group){
+
+            if (!group) {
                 return res.status(404).json({
                     message: "Group not found in the database!"
                 })
@@ -140,21 +140,36 @@ const groupController = {
                 message: "Removed group successfully"
             });
 
-        } catch(error){
+        } catch (error) {
             return res.status(500).json({
                 message: "Internal server error meh!"
             })
         }
     },
 
-    getGroupsByUser: async(req, res) => {
-        try{
+    getGroupsByUser: async (req, res) => {
+        try {
             const createdBy = req.user.adminId;
-            console.log("this is the adminId", createdBy);
+            const {email} = req.user;
 
-            const groups = await groupDao.getGroupsByCreatedById(createdBy);
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 5;
+            const skip = (page - 1) * limit;
 
-            if(groups.length == 0){
+            const sortBy = req.query.sortBy || 'newest';
+            console.log("sortBy");
+            let sortOptions = {createdAt: -1};
+
+            if(sortBy === "oldest"){
+                sortOptions = {createdAt: 1}
+            }
+            
+            const {groups, totalCount} = await groupDao.getGroupsPaginated(email, limit, skip, sortOptions);
+            console.log("value of totalCOunt: ", totalCount);
+
+            console.log(groups);
+
+            if (groups.length == 0) {
                 return res.status(404).json({
                     message: "No groups exist for the given email"
                 })
@@ -162,10 +177,17 @@ const groupController = {
 
             return res.status(200).json({
                 message: "All groups fetched successfully!",
-                groups  
+                groups : groups,
+                groupCount: totalCount,
+                pagination: {
+                    totalItems :totalCount,
+                    totalPages: Math.ceil(totalCount/limit),
+                    currentPage:    page,
+                    itemsPerPage: limit
+                }
             })
-            
-        } catch (error){
+
+        } catch (error) {
             console.log(error);
 
             return res.status(500).json({
@@ -175,10 +197,11 @@ const groupController = {
     },
 
     getAuditLogs: async (req, res) => {
-    return res.status(200).json({
-        logs: []
-    });
-}
+        return res.status(200).json({
+            logs: []
+        });
+    },
+
 };
 
 module.exports = groupController;
