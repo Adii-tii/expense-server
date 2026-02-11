@@ -11,6 +11,7 @@ const rbacRoutes = require('./src/routes/rbacRoutes');
 const paymentsRoutes = require('./src/routes/paymentsRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const settlementRoutes  = require('./src/routes/settlementRoutes');
+const dashboardRoutes = require('../expense-server/src/routes/dashboardRoutes');
 
 const app = express();
 
@@ -42,7 +43,10 @@ app.use('/groups', groupRoutes);
 app.use('/user', rbacRoutes);
 app.use('/payments', paymentsRoutes);
 app.use('/profile', profileRoutes);
+app.use("/dashboard", dashboardRoutes);
 app.use("/groups/:groupId/settlements", settlementRoutes);
+app.use("/settlements", settlementRoutes);
+
 
 
 app.post("/__routes_test", (req, res) => {
