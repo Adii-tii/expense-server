@@ -1,10 +1,18 @@
 const express = require("express");
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
+
 const groupController = require("../controllers/groupController");
+const expenseController = require("../controllers/expenseController");
+
 const authMiddleware = require("../middlewares/authMiddleware");
-const authorizeMiddleware = require('../middlewares/authorizeMiddleware');
+const authorizeMiddleware = require("../middlewares/authorizeMiddleware");
+
+const expenseRoutes = require("./expenseRoutes");
+const settlementRoutes = require("./settlementRoutes");
 
 console.log("GROUP ROUTES LOADED");
+
+/* ================= GROUP MANAGEMENT ================= */
 
 router.post(
     "/create",
@@ -18,6 +26,13 @@ router.patch(
     authMiddleware.protect,
     authorizeMiddleware('group:update'),
     groupController.update
+);
+
+router.patch(
+    "/:groupId/add-members",
+    authMiddleware.protect,
+    authorizeMiddleware('group:update'),
+    groupController.addMembers
 );
 
 router.get(
@@ -39,6 +54,46 @@ router.delete(
     authMiddleware.protect,
     authorizeMiddleware('group:delete'),
     groupController.deleteGroup
-)
+);
+
+/* ================= BALANCE SUMMARY ================= */
+
+router.get(
+    "/:groupId/total-owed",
+    authMiddleware.protect,
+    expenseController.getTotalOwedByUserInGroup
+);
+
+router.get(
+    "/:groupId/total-is-owed",
+    authMiddleware.protect,
+    expenseController.getTotalUserIsOwedInGroup
+);
+
+router.get(
+    "/:groupId/people-i-owe",
+    authMiddleware.protect,
+    expenseController.getPeopleIOwe
+);
+
+// router.get(
+//     "/:groupId/people-who-owe-me",
+//     authMiddleware.protect,
+//     expenseController.getPeopleWhoOweMe
+// );
+
+/* ================= NESTED ROUTES ================= */
+
+router.use(
+    "/:groupId/expenses",
+    authMiddleware.protect,
+    expenseRoutes
+);
+
+router.use(
+    "/:groupId/settlements",
+    authMiddleware.protect,
+    settlementRoutes
+);
 
 module.exports = router;
