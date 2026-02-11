@@ -1,18 +1,20 @@
 const mongoose = require("mongoose");
-const Group = require("../models/group");
-
 
 const expenseSchema = new mongoose.Schema({
+
     groupId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Group",
-        required: true
+        required: true,
+        index: true
     },
 
     title: {
         type: String,
         required: true
     },
+
+    notes: String,
 
     currency: {
         type: String,
@@ -24,55 +26,55 @@ const expenseSchema = new mongoose.Schema({
         required: true
     },
 
-    members: [
+    paidBy: [
         {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            },
+
             email: {
                 type: String,
                 required: true
             },
-            share: {
+
+            amount: {
                 type: Number,
                 required: true
-            },
-            userId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User"
             }
         }
     ],
 
-    paidBy: {
-        type: [],
-        required: true
-    },
+    splits: [
+        {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User"
+            },
 
+            email: {
+                type: String,
+                required: true
+            },
+
+            share: {
+                type: Number,
+                required: true
+            },
+
+            remaining: {
+                type: Number,
+                required: true
+            }
+        }
+    ],
 
     splitType: {
         type: String,
         enum: ["equal", "unequal", "share", "custom"],
         default: "equal"
-    },
-
-    status: {
-        type: String,
-        enum: ["pending", "partial", "settled"],
-        default: "pending",
-    },
-
-    isSettled: {
-        type: Boolean,
-        default: false
-    },
-
-
-    updatedAt: {
-        type: Date,
-    }, 
-
-    createdAt: {
-        type: Date,
-        default: Date.now
     }
-});
+
+}, { timestamps: true });
 
 module.exports = mongoose.model("Expense", expenseSchema);

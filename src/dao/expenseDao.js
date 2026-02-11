@@ -3,14 +3,12 @@ const mongoose = require("mongoose");
 
 const expenseDao = {
 
-    /* ================= CREATE ================= */
 
     createExpense: async (expenseData) => {
         const newExpense = new Expense(expenseData);
         return await newExpense.save();
     },
 
-    /* ================= UPDATE EXPENSE ================= */
 
     updateExpense: async (expenseId, updateData) => {
         return await Expense.findByIdAndUpdate(
@@ -20,14 +18,11 @@ const expenseDao = {
         );
     },
 
-    /* ================= GET BY ID ================= */
 
     getExpenseById: async (expenseId) => {
         return await Expense.findById(expenseId);
     },
 
-    /* ================= UPDATE SPLITS ================= */
-    // Used when settlements happen
 
     updateSplitRemaining: async (expenseId, email, newRemaining) => {
 
@@ -45,7 +40,6 @@ const expenseDao = {
         );
     },
 
-    /* ================= MARK EXPENSE SETTLED ================= */
 
     markExpenseSettled: async (expenseId) => {
         return await Expense.findByIdAndUpdate(
@@ -55,14 +49,11 @@ const expenseDao = {
         );
     },
 
-    /* ================= DELETE ================= */
-    // (soft delete recommended later)
 
     deleteExpense: async (expenseId) => {
         return await Expense.findByIdAndDelete(expenseId);
     },
 
-    /* ================= QUERY ================= */
 
     getExpensesByGroupId: async (groupId) => {
         return await Expense.find({ groupId });
@@ -76,10 +67,16 @@ const expenseDao = {
     },
 
     getExpensesByUserParticipation: async (email) => {
+
         return await Expense.find({
-            "splits.email": email
+            $or: [
+                { "splits.email": email },
+                { "paidBy.email": email }
+            ]
         });
+
     },
+
 
 
     getExpensesPaidByUser: async (userId) => {
@@ -150,10 +147,6 @@ const expenseDao = {
         return totalDebt;
     },
 
-
-    /* Inside expenseDao.js */
-
-    // 1. How much do I owe others?
     getTotalOwedByUser: async (groupId, email) => {
         const result = await Expense.aggregate([
             {
@@ -170,7 +163,6 @@ const expenseDao = {
         return result[0]?.total || 0;
     },
 
-    // 2. How much do others owe me?
     getTotalUserIsOwed: async (groupId, email) => {
 
         const expenses = await Expense.find({
@@ -238,7 +230,7 @@ const expenseDao = {
                     to: creditorEmail,
                     amount: Number(amount.toFixed(2))
                 }))
-                .filter(pair => pair.amount > 0); 
+                .filter(pair => pair.amount > 0);
 
             return res.status(200).json({
                 myDebts: finalPairs

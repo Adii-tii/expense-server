@@ -1,11 +1,12 @@
 const expenseDao = require("../dao/expenseDao");
 const groupDao = require("../dao/groupDao");
+const Group = require("../models/group");
 
 const expenseController = {
 
+    /* ================= CREATE EXPENSE ================= */
 
     create: async (req, res) => {
-
         try {
 
             const { groupId } = req.params;
@@ -26,7 +27,12 @@ const expenseController = {
                 });
             }
 
-            /* ===== VALIDATION ===== */
+            const group = await Group.findById(groupId);
+            if (!group) {
+                return res.status(404).json({
+                    message: "Group not found"
+                });
+            }
 
             const paidTotal = paidBy.reduce((sum, p) => sum + p.amount, 0);
             const splitTotal = splits.reduce((sum, s) => sum + s.share, 0);
@@ -37,22 +43,15 @@ const expenseController = {
                 });
             }
 
-            /* initialize remaining */
-
             const paidMap = {};
             paidBy.forEach(p => {
                 paidMap[p.email] = (paidMap[p.email] || 0) + p.amount;
             });
 
-            const preparedSplits = splits.map(s => {
-                const paid = paidMap[s.email] || 0;
-                const remaining = Math.max(s.share - paid, 0);
-
-                return {
-                    ...s,
-                    remaining
-                };
-            });
+            const preparedSplits = splits.map(s => ({
+                ...s,
+                remaining: s.share - (paidMap[s.email] || 0)
+            }));
 
             const expense = await expenseDao.createExpense({
                 groupId,
@@ -64,6 +63,20 @@ const expenseController = {
                 splitType,
                 notes
             });
+
+            /* ===== UPDATE GROUP BALANCES ===== */
+
+            preparedSplits.forEach(split => {
+                const entry = group.balances.find(b => b.userEmail === split.email);
+                if (entry) entry.netBalance -= split.share;
+            });
+
+            paidBy.forEach(payer => {
+                const entry = group.balances.find(b => b.userEmail === payer.email);
+                if (entry) entry.netBalance += payer.amount;
+            });
+
+            await group.save();
 
             return res.status(201).json({
                 expense,
@@ -78,38 +91,20 @@ const expenseController = {
         }
     },
 
+    /* ================= UPDATE EXPENSE ================= */
 
     update: async (req, res) => {
-
         try {
-
             const { expenseId } = req.params;
 
             const existing = await expenseDao.getExpenseById(expenseId);
-
             if (!existing) {
                 return res.status(404).json({ message: "Expense not found" });
             }
 
-            const updateData = req.body;
-
-            /* Optional validation if financial fields updated */
-
-            if (updateData.amount && updateData.splits && updateData.paidBy) {
-
-                const paidTotal = updateData.paidBy.reduce((s, p) => s + p.amount, 0);
-                const splitTotal = updateData.splits.reduce((s, p) => s + p.share, 0);
-
-                if (paidTotal !== updateData.amount || splitTotal !== updateData.amount) {
-                    return res.status(400).json({
-                        message: "Paid and split totals must equal expense amount"
-                    });
-                }
-            }
-
-            const updatedExpense = await expenseDao.updateExpense(expenseId, updateData);
-
-            return res.status(200).json({ updatedExpense });
+            return res.status(400).json({
+                message: "Editing expenses after settlements is restricted. Create a correction expense instead."
+            });
 
         } catch (error) {
             console.log(error);
@@ -119,94 +114,68 @@ const expenseController = {
         }
     },
 
+    /* ================= GET EXPENSES ================= */
 
     getExpensesByGroup: async (req, res) => {
-
         try {
 
             const { groupId } = req.params;
             const { email } = req.user;
 
-            const groupExists = await groupDao.getGroupById(groupId);
+            const group = await Group.findById(groupId);
 
-            if (!groupExists) {
+            if (!group) {
                 return res.status(404).json({
                     message: "Group does not exist"
                 });
             }
 
             const expenses = await expenseDao.getExpensesByGroupId(groupId);
-            const totalOwed = await expenseDao.getTotalOwedByUser(groupId, email);
-            const totalUserIsOwed = await expenseDao.getTotalUserIsOwed(groupId, email);
+
+            const myBalance = group.balances.find(b => b.userEmail === email);
 
             return res.status(200).json({
                 expenses,
-                totalOwed,
-                totalUserIsOwed
+                netBalance: myBalance ? myBalance.netBalance : 0
             });
 
         } catch (error) {
             console.log(error);
-
             return res.status(500).json({
                 message: "Internal server error"
             });
         }
     },
 
-
-    getExpensesBySettlementStatus: async (req, res) => {
-
-        try {
-
-            const { groupId } = req.params;
-            const { isSettled } = req.query;
-
-            const expenses = await expenseDao.getExpensesBySettlementStatus(
-                groupId,
-                isSettled === "true"
-            );
-
-            return res.status(200).json({ expenses });
-
-        } catch (error) {
-            console.log(error);
-            return res.status(500).json({ message: "Internal server error" });
-        }
-    },
-
-
-    getExpensesByUserParticipation: async (req, res) => {
-
-        try {
-
-            const { userId } = req.user;
-
-            const expenses = await expenseDao.getExpensesByUserParticipation(userId);
-
-            return res.status(200).json({ expenses });
-
-        } catch (error) {
-            console.log(error);
-            return res.status(500).json({ message: "Internal server error" });
-        }
-    },
-
+    /* ================= DELETE EXPENSE ================= */
 
     delete: async (req, res) => {
-
         try {
 
             const { expenseId } = req.params;
 
             const expense = await expenseDao.getExpenseById(expenseId);
-
             if (!expense) {
                 return res.status(404).json({
                     message: "Expense does not exist"
                 });
             }
 
+            const group = await Group.findById(expense.groupId);
+
+            /* ===== ROLLBACK BALANCES ===== */
+
+            expense.splits.forEach(split => {
+                const entry = group.balances.find(b => b.userEmail === split.email);
+                if (entry) entry.netBalance += split.share;
+            });
+
+            expense.paidBy.forEach(payer => {
+                const entry = group.balances.find(b => b.userEmail === payer.email);
+                if (entry) entry.netBalance -= payer.amount;
+            });
+
+            await group.save();
             await expenseDao.deleteExpense(expenseId);
 
             return res.status(200).json({
@@ -221,92 +190,80 @@ const expenseController = {
         }
     },
 
+    /* ================= TOTAL I OWE ================= */
+
     getTotalOwedByUserInGroup: async (req, res) => {
         try {
-            const { email } = req.user; 
+            const { email } = req.user;
             const { groupId } = req.params;
 
-            const totalOwed = await expenseDao.getTotalOwedByUser(groupId, email);
+            const group = await Group.findById(groupId);
 
-            return res.status(200).json({
-                totalOwed,
-                message: "Total amount you owe in this group"
-            });
+            const myBalance = group.balances.find(b => b.userEmail === email);
+
+            const totalOwed = myBalance && myBalance.netBalance < 0
+                ? Math.abs(myBalance.netBalance)
+                : 0;
+
+            return res.status(200).json({ totalOwed });
+
         } catch (error) {
-            console.error(error);
             return res.status(500).json({ message: "Internal server error" });
         }
     },
+
+    /* ================= TOTAL I AM OWED ================= */
 
     getTotalUserIsOwedInGroup: async (req, res) => {
         try {
             const { email } = req.user;
             const { groupId } = req.params;
 
-            const totalIsOwed = await expenseDao.getTotalUserIsOwed(groupId, email);
+            const group = await Group.findById(groupId);
 
-            return res.status(200).json({
-                totalIsOwed,
-                message: "Total amount you are owed in this group"
-            });
+            const myBalance = group.balances.find(b => b.userEmail === email);
+
+            const totalIsOwed = myBalance && myBalance.netBalance > 0
+                ? myBalance.netBalance
+                : 0;
+
+            return res.status(200).json({ totalIsOwed });
+
         } catch (error) {
-            console.error(error);
             return res.status(500).json({ message: "Internal server error" });
         }
     },
 
+    /* ================= PEOPLE I OWE ================= */
+
     getPeopleIOwe: async (req, res) => {
         try {
+
             const { groupId } = req.params;
-            const { email: myEmail } = req.user;
+            const { email } = req.user;
 
-            const expenses = await expenseDao.getExpensesByGroupId(groupId);
-            const unsettledExpenses = expenses.filter(e => !e.isSettled);
+            const group = await Group.findById(groupId);
 
-            const balanceMap = {};
+            const myBalance = group.balances.find(b => b.userEmail === email);
 
-            unsettledExpenses.forEach((expense) => {
-                const totalBill = expense.amount;
-                const payers = expense.paidBy; // [{email, amount}]
-                const splits = expense.splits; // [{email, remaining}]
+            if (!myBalance || myBalance.netBalance >= 0) {
+                return res.status(200).json({ creditors: [] });
+            }
 
-                const mySplit = splits.find(s => s.email === myEmail);
-                if (mySplit && mySplit.remaining > 0) {
-                    payers.forEach(payer => {
-                        if (payer.email === myEmail) return; 
+            let remainingDebt = Math.abs(myBalance.netBalance);
 
-                        const amountOwedToPayer = mySplit.remaining * (payer.amount / totalBill);
-                        balanceMap[payer.email] = (balanceMap[payer.email] || 0) + amountOwedToPayer;
-                    });
-                }
+            const creditors = group.balances
+                .filter(b => b.netBalance > 0)
+                .map(b => {
+                    const amount = Math.min(remainingDebt, b.netBalance);
+                    remainingDebt -= amount;
+                    return { email: b.userEmail, amount };
+                })
+                .filter(c => c.amount > 0);
 
-                const myPayment = payers.find(p => p.email === myEmail);
-                if (myPayment && myPayment.amount > 0) {
-                    const myContributionRatio = myPayment.amount / totalBill;
-
-                    splits.forEach(otherPerson => {
-                        if (otherPerson.email === myEmail) return;
-
-                        const amountTheyOweMe = otherPerson.remaining * myContributionRatio;
-                        balanceMap[otherPerson.email] = (balanceMap[otherPerson.email] || 0) - amountTheyOweMe;
-                    });
-                }
-            });
-
-            const iOweThesePeople = Object.entries(balanceMap)
-                .map(([email, netAmount]) => ({
-                    email,
-                    name: email.split('@')[0], // Fallback name
-                    amount: Number(netAmount.toFixed(2))
-                }))
-                .filter(pair => pair.amount > 0); 
-
-            return res.status(200).json({
-                creditors: iOweThesePeople
-            });
+            return res.status(200).json({ creditors });
 
         } catch (error) {
-            console.error("Error in getPeopleIOwe:", error);
             return res.status(500).json({ message: "Internal server error" });
         }
     }

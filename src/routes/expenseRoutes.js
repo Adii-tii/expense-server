@@ -3,11 +3,10 @@ const expenseController = require("../controllers/expenseController");
 
 const router = express.Router({ mergeParams: true });
 
+
 router.post("/", expenseController.create);
 router.get("/", expenseController.getExpensesByGroup);
 router.patch("/:expenseId", expenseController.update);
 router.delete("/:expenseId", expenseController.delete);
-router.get("/settlement", expenseController.getExpensesBySettlementStatus);
-router.get("/participating", expenseController.getExpensesByUserParticipation);
 
 module.exports = router;
