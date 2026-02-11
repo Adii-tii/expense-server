@@ -4,7 +4,6 @@ const Group = require("../models/group");
 
 const expenseController = {
 
-    /* ================= CREATE EXPENSE ================= */
 
     create: async (req, res) => {
         try {
@@ -64,7 +63,6 @@ const expenseController = {
                 notes
             });
 
-            /* ===== UPDATE GROUP BALANCES ===== */
 
             preparedSplits.forEach(split => {
                 const entry = group.balances.find(b => b.userEmail === split.email);
@@ -91,7 +89,6 @@ const expenseController = {
         }
     },
 
-    /* ================= UPDATE EXPENSE ================= */
 
     update: async (req, res) => {
         try {
@@ -114,7 +111,6 @@ const expenseController = {
         }
     },
 
-    /* ================= GET EXPENSES ================= */
 
     getExpensesByGroup: async (req, res) => {
         try {
@@ -147,7 +143,6 @@ const expenseController = {
         }
     },
 
-    /* ================= DELETE EXPENSE ================= */
 
     delete: async (req, res) => {
         try {
@@ -163,7 +158,6 @@ const expenseController = {
 
             const group = await Group.findById(expense.groupId);
 
-            /* ===== ROLLBACK BALANCES ===== */
 
             expense.splits.forEach(split => {
                 const entry = group.balances.find(b => b.userEmail === split.email);
@@ -190,7 +184,6 @@ const expenseController = {
         }
     },
 
-    /* ================= TOTAL I OWE ================= */
 
     getTotalOwedByUserInGroup: async (req, res) => {
         try {
@@ -212,7 +205,6 @@ const expenseController = {
         }
     },
 
-    /* ================= TOTAL I AM OWED ================= */
 
     getTotalUserIsOwedInGroup: async (req, res) => {
         try {
@@ -234,7 +226,6 @@ const expenseController = {
         }
     },
 
-    /* ================= PEOPLE I OWE ================= */
 
     getPeopleIOwe: async (req, res) => {
         try {
