@@ -9,6 +9,11 @@ const expenseSchema = new mongoose.Schema({
         index: true
     },
 
+    category: {
+        type:String,
+        default: "other"
+    },
+
     title: {
         type: String,
         required: true

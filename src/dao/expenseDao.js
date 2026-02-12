@@ -1,5 +1,6 @@
 const Expense = require("../models/expense");
 const mongoose = require("mongoose");
+const Group = require("../models/group");
 
 const expenseDao = {
 
@@ -76,8 +77,6 @@ const expenseDao = {
         });
 
     },
-
-
 
     getExpensesPaidByUser: async (userId) => {
         return await Expense.find({
@@ -194,53 +193,61 @@ const expenseDao = {
         return total;
     },
 
-    getUserDebtsInGroup: async (req, res) => {
-        try {
-            const { groupId } = req.params;
-            const { email: myEmail } = req.user; // Logged-in user
+    getExpenseByCategoryForUser: async (userEmail, category) => {
 
-            // 1. Fetch all unsettled expenses in the group
-            const expenses = await expenseDao.getUnsettledExpensesByGroup(groupId);
+        return await Expense.find({
+            category,
+            "splits.email": userEmail
+        }).lean();
 
-            // 2. Map to track net balances specifically for the user
-            // { "creditorEmail": netAmount }
-            const myDebts = {};
+    },
 
-            expenses.forEach((expense) => {
-                const totalAmount = expense.amount;
-                const payers = expense.paidBy; // Array: [{email, amount}]
-                const splits = expense.splits; // Array: [{email, remaining}]
+     getExpensesGroupedByCategoryForUser: async (email) => {
 
-                const mySplit = splits.find(s => s.email === myEmail);
-                if (mySplit && mySplit.remaining > 0) {
-                    payers.forEach((payer) => {
-                        if (payer.email === myEmail) return; // Can't owe myself
+        /* -------- FIND USER GROUPS -------- */
 
-                        // Calculation: My Remaining Debt * (Payer's Share / Total Bill)
-                        const shareOwedToPayer = mySplit.remaining * (payer.amount / totalAmount);
+        const groups = await Group.find({
+            memberEmail: email
+        }).select("_id");
 
-                        myDebts[payer.email] = (myDebts[payer.email] || 0) + shareOwedToPayer;
-                    });
+        const groupIds = groups.map(g => g._id);
+
+        /* -------- AGGREGATE EXPENSES -------- */
+
+        return await Expense.aggregate([
+            {
+                $match: {
+                    groupId: { $in: groupIds }
                 }
+            },
+            {
+                $group: {
+                    _id: "$category",
+                    expenses: { $push: "$$ROOT" },
+                    totalAmount: { $sum: "$amount" }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    category: "$_id",
+                    expenses: 1,
+                    totalAmount: 1
+                }
+            }
+        ]);
 
-            });
+    },
 
-            const finalPairs = Object.entries(myDebts)
-                .map(([creditorEmail, amount]) => ({
-                    to: creditorEmail,
-                    amount: Number(amount.toFixed(2))
-                }))
-                .filter(pair => pair.amount > 0);
+    getUnsettledExpensesForGroups: async (groupIds) => {
 
-            return res.status(200).json({
-                myDebts: finalPairs
-            });
+    return await Expense.find({
+        groupId: { $in: groupIds },
+        "splits.remaining": { $gt: 0 }
+    }).lean();
 
-        } catch (error) {
-            console.error("Error in getUserDebtsInGroup:", error);
-            return res.status(500).json({ message: "Internal server error" });
-        }
-    }
+}
+
 
 };
 

@@ -9,11 +9,11 @@ const groupDao = {
     },
 
     updateGroup: async (data) => {
-        const { groupId, name, description, thumbnail, adminEmail, paymentStatus } = data;
+        const { groupId, name, description, thumbnail, adminEmail } = data;
 
         return await Group.findByIdAndUpdate(
             groupId,
-            { name, description, thumbnail, adminEmail, paymentStatus },
+            { name, description, thumbnail, adminEmail },
             { new: true }
         );
     },

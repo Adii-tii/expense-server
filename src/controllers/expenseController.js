@@ -12,6 +12,7 @@ const expenseController = {
 
             const {
                 title,
+                category,
                 currency,
                 amount,
                 splits,
@@ -55,6 +56,7 @@ const expenseController = {
             const expense = await expenseDao.createExpense({
                 groupId,
                 title,
+                category,
                 currency: currency || "INR",
                 amount,
                 splits: preparedSplits,
@@ -213,11 +215,20 @@ const expenseController = {
 
             const group = await Group.findById(groupId);
 
-            const myBalance = group.balances.find(b => b.userEmail === email);
+            if (!group) {
+                return res.status(404).json({ message: "Group not found" });
+            }
 
-            const totalIsOwed = myBalance && myBalance.netBalance > 0
-                ? myBalance.netBalance
-                : 0;
+            const balances = group.balances || [];
+
+            const myBalance = balances.find(
+                b => b.userEmail === email
+            );
+
+            const totalIsOwed =
+                myBalance && myBalance.netBalance > 0
+                    ? Number(myBalance.netBalance)
+                    : 0;
 
             return res.status(200).json({ totalIsOwed });
 
@@ -225,6 +236,7 @@ const expenseController = {
             return res.status(500).json({ message: "Internal server error" });
         }
     },
+
 
 
     getPeopleIOwe: async (req, res) => {
@@ -235,7 +247,15 @@ const expenseController = {
 
             const group = await Group.findById(groupId);
 
-            const myBalance = group.balances.find(b => b.userEmail === email);
+            if (!group) {
+                return res.status(404).json({ message: "Group not found" });
+            }
+
+            const balances = group.balances || [];
+
+            const myBalance = balances.find(
+                b => b.userEmail === email
+            );
 
             if (!myBalance || myBalance.netBalance >= 0) {
                 return res.status(200).json({ creditors: [] });
@@ -243,21 +263,141 @@ const expenseController = {
 
             let remainingDebt = Math.abs(myBalance.netBalance);
 
-            const creditors = group.balances
-                .filter(b => b.netBalance > 0)
-                .map(b => {
+            const creditors = [];
+
+            for (const b of balances) {
+
+                if (remainingDebt <= 0) break;
+
+                if (b.netBalance > 0) {
+
                     const amount = Math.min(remainingDebt, b.netBalance);
+
+                    creditors.push({
+                        email: b.userEmail,
+                        amount: Number(amount.toFixed(2))
+                    });
+
                     remainingDebt -= amount;
-                    return { email: b.userEmail, amount };
-                })
-                .filter(c => c.amount > 0);
+                }
+            }
 
             return res.status(200).json({ creditors });
 
         } catch (error) {
             return res.status(500).json({ message: "Internal server error" });
         }
-    }
+    },
+
+
+    getUserDebtsInGroup: async (req, res) => {
+        try {
+            const { groupId } = req.params;
+            const { email: myEmail } = req.user; // Logged-in user
+
+            // 1. Fetch all unsettled expenses in the group
+            const expenses = await expenseDao.getUnsettledExpensesByGroup(groupId);
+
+            // 2. Map to track net balances specifically for the user
+            // { "creditorEmail": netAmount }
+            const myDebts = {};
+
+            expenses.forEach((expense) => {
+                const totalAmount = expense.amount;
+                const payers = expense.paidBy; // Array: [{email, amount}]
+                const splits = expense.splits; // Array: [{email, remaining}]
+
+                const mySplit = splits.find(s => s.email === myEmail);
+                if (mySplit && mySplit.remaining > 0) {
+                    payers.forEach((payer) => {
+                        if (payer.email === myEmail) return; // Can't owe myself
+
+                        // Calculation: My Remaining Debt * (Payer's Share / Total Bill)
+                        const shareOwedToPayer = mySplit.remaining * (payer.amount / totalAmount);
+
+                        myDebts[payer.email] = (myDebts[payer.email] || 0) + shareOwedToPayer;
+                    });
+                }
+
+            });
+
+            const finalPairs = Object.entries(myDebts)
+                .map(([creditorEmail, amount]) => ({
+                    to: creditorEmail,
+                    amount: Number(amount.toFixed(2))
+                }))
+                .filter(pair => pair.amount > 0);
+
+            return res.status(200).json({
+                myDebts: finalPairs
+            });
+
+        } catch (error) {
+            console.error("Error in getUserDebtsInGroup:", error);
+            return res.status(500).json({ message: "Internal server error" });
+        }
+    },
+
+    getExpenseByCategory: async (req, res) => {
+        try {
+
+            const { email } = req.user;
+            const { category } = req.params;
+
+            if (!category) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Category is required"
+                });
+            }
+
+            const expenses = await expenseDao.getExpenseByCategoryForUser(email, category);
+
+            return res.status(200).json({
+                success: true,
+                count: expenses.length,
+                expenses
+            });
+
+        } catch (error) {
+
+            console.error("getExpenseByCategory Error:", error);
+
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error"
+            });
+        }
+    },
+
+    getExpensesGroupedByCategory: async (req, res) => {
+
+        try {
+
+            const { email } = req.user;
+
+            const data =
+                await expenseDao.getExpensesGroupedByCategoryForUser(email);
+
+            return res.status(200).json({
+                success: true,
+                categories: data
+            });
+
+        } catch (error) {
+
+            console.error("Grouped Category Error:", error);
+
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error"
+            });
+        }
+    },
+
+
+
+
 
 };
 

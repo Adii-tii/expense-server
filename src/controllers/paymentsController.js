@@ -1,5 +1,5 @@
 const Razorpay = require("razorpay");
-const PLAN_IDS = require("../constants/paymentConstants");
+const {PLAN_IDS} = require("../constants/paymentConstants");
 const crypto = require("crypto");
 const User = require("../models/user");
 const { CREDIT_TO_PAISA_MAPPING } = require("../constants/paymentConstants");
@@ -84,6 +84,8 @@ const paymentsController = {
         try {
             const { plan_name } = req.body;
 
+            console.log(plan_name);
+            console.log(PLAN_IDS);
             if (!PLAN_IDS[plan_name]) {
                 return res.status(400).json({
                     message: "Invalid plan selected"
@@ -91,6 +93,7 @@ const paymentsController = {
             }
 
             const plan = PLAN_IDS[plan_name];
+            console.log(plan);
 
             const subscription = await razorpayClient.subscriptions.create({
                 plan_id: plan.id,
@@ -101,7 +104,9 @@ const paymentsController = {
                 }
             })
 
-            return res.json({
+            console.log("created sub");
+
+            return res.status(200).json({
                 subscription: subscription
             })
 
@@ -116,21 +121,24 @@ const paymentsController = {
 
     captureSubscription: async (req, res) => {
         try {
+            console.log(req.body);
             const { subscriptionId } = req.body;
 
             const subscription = await razorpayClient.subscriptions.fetch(subscriptionId);
-            const user = await User.findById({ _id: req.user._id });
+            console.log("the sub is", subscription);
+            const user = await User.findById({ _id: req.user.id });
 
             //this obj will help us know on the UI whether its ok for the user to initiate another subs. or one is already in progress. we dont want user to initiate multiple subs at a time.
 
             user.subscription = {
                 subscriptionId: subscriptionId,
-                planId: planId,
+                planId: subscription.plan_id,
                 status: subscription.status
             }
 
             await user.save();
-            res.json({
+            
+            return res.json({
                 user: user
             })
 
