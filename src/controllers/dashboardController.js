@@ -1,58 +1,36 @@
 const expenseDao = require("../dao/expenseDao");
+const groupDao = require("../dao/groupDao");
+const expense = require("../models/expense");
 const Group = require("../models/group");
 
 const dashboardController = {
 
   getUserSummary: async (req, res) => {
     try {
-
       const userEmail = req.user.email;
 
-      /* ===== FETCH ALL EXPENSES WHERE USER IS INVOLVED ===== */
-
-      const expenses =
-        await expenseDao.getExpensesByUserParticipation(userEmail);
+      const userGroups = await groupDao.getGroupByEmail(userEmail);
 
       let totalOwe = 0;
       let totalOwed = 0;
-      let monthlyTotal = 0;
+      let totalSpendings = await expenseDao.getTotalUserSpendings(userEmail);
 
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
+      const groupSummaries = await Promise.all(
+        userGroups.map(async (userGroup) => {
 
-      expenses.forEach(expense => {
+          const [toPay, toReceive, spendings] = await Promise.all([
+            expenseDao.getTotalOwedByUserInGroup(userEmail, userGroup),
+            expenseDao.getTotalUserIsOwedInGroup(userEmail, userGroup),
+          ]);
 
-        const mySplit =
-          expense.splits?.find(s => s.email === userEmail);
+          return { toPay, toReceive, spendings };
+        })
+      );
 
-        const myPaid =
-          expense.paidBy?.find(p => p.email === userEmail)?.amount || 0;
-
-        if (!mySplit) return;
-
-        const myShare = mySplit.share;
-        const myRemaining = mySplit.remaining ?? myShare;
-
-        /* ===== OWE ===== */
-        if (myRemaining > 0)
-          totalOwe += myRemaining;
-
-        /* ===== OWED ===== */
-        if (myPaid > myShare)
-          totalOwed += (myPaid - myShare);
-
-        /* ===== MONTHLY ===== */
-        const createdDate = new Date(expense.createdAt);
-
-        if (
-          createdDate.getMonth() === currentMonth &&
-          createdDate.getFullYear() === currentYear
-        ) {
-          if (mySplit)
-            monthlyTotal += myShare;
-        }
-
-      });
+      for (const g of groupSummaries) {
+        totalOwe += g.toPay || 0;
+        totalOwed += g.toReceive || 0;
+      }
 
       const totalBalance = totalOwed - totalOwe;
 
@@ -60,7 +38,7 @@ const dashboardController = {
         totalBalance,
         totalOwe,
         totalOwed,
-        monthlyTotal
+        totalSpendings
       });
 
     } catch (error) {

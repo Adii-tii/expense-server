@@ -24,7 +24,7 @@ const groupSchema = new mongoose.Schema({
 
     balances: [
         {
-            userEmail: { type: String, required: true },
+            userEmail: { type: String, required: true }, //Pos net indicates user is yet to receive money, neg indicates the money user owes in total within that group
             netBalance: { type: Number, default: 0 }
         }
     ]

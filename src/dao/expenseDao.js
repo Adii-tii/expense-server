@@ -146,22 +146,6 @@ const expenseDao = {
         return totalDebt;
     },
 
-    getTotalOwedByUser: async (groupId, email) => {
-        const result = await Expense.aggregate([
-            {
-                $match: {
-                    groupId: new mongoose.Types.ObjectId(groupId),
-                    isSettled: false,
-                    "splits.email": email
-                }
-            },
-            { $unwind: "$splits" },
-            { $match: { "splits.email": email } },
-            { $group: { _id: null, total: { $sum: "$splits.remaining" } } }
-        ]);
-        return result[0]?.total || 0;
-    },
-
     getTotalUserIsOwed: async (groupId, email) => {
 
         const expenses = await Expense.find({
@@ -202,7 +186,7 @@ const expenseDao = {
 
     },
 
-     getExpensesGroupedByCategoryForUser: async (email) => {
+    getExpensesGroupedByCategoryForUser: async (email) => {
 
         /* -------- FIND USER GROUPS -------- */
 
@@ -241,12 +225,53 @@ const expenseDao = {
 
     getUnsettledExpensesForGroups: async (groupIds) => {
 
-    return await Expense.find({
-        groupId: { $in: groupIds },
-        "splits.remaining": { $gt: 0 }
-    }).lean();
+        return await Expense.find({
+            groupId: { $in: groupIds },
+            "splits.remaining": { $gt: 0 }
+        }).lean();
 
-}
+    },
+
+    getTotalOwedByUserInGroup: async (email, group) => {
+        console.log("this the group", group);
+        const myBalance = group.balances.find(b => b.userEmail === email);
+
+        const totalOwed = myBalance && myBalance.netBalance < 0
+            ? Math.abs(myBalance.netBalance)
+            : 0
+        return totalOwed;
+    },
+
+    getTotalUserIsOwedInGroup: async (email, group) => {
+        const balances = group.balances || [];
+
+        const myBalance = balances.find(
+            b => b.userEmail === email
+        );
+
+        const totalIsOwed =
+            myBalance && myBalance.netBalance > 0
+                ? Number(myBalance.netBalance)
+                : 0;
+
+        return totalIsOwed;
+    },
+
+    getTotalUserSpendings: async (email) => {
+        const result = await Expense.aggregate([
+            { $match: { "splits.email": email } },
+            { $unwind: "$splits" },
+            { $match: { "splits.email": email } },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$splits.share" }
+                }
+            }
+        ]);
+
+        return result[0]?.total || 0;
+    }
 
 
 };

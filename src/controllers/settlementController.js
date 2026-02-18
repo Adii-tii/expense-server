@@ -112,8 +112,7 @@ const settlementController = {
           });
         }
 
-        /* ===== ONLY UPDATE GROUP BALANCE ===== */
-
+        //updating netbalances only. 
         fromBalance.netBalance += amount;
         toBalance.netBalance -= amount;
 

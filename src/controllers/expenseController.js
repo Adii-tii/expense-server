@@ -193,13 +193,11 @@
                 const { groupId } = req.params;
 
                 const group = await Group.findById(groupId);
+                if (!group) {
+                    return res.status(404).json({ message: "Group not found" });
+                }
 
-                const myBalance = group.balances.find(b => b.userEmail === email);
-
-                const totalOwed = myBalance && myBalance.netBalance < 0
-                    ? Math.abs(myBalance.netBalance)
-                    : 0;
-
+                const totalOwed = await expenseDao.getTotalOwedByUserInGroup(email, group);
                 return res.status(200).json({ totalOwed });
 
             } catch (error) {
@@ -219,17 +217,7 @@
                     return res.status(404).json({ message: "Group not found" });
                 }
 
-                const balances = group.balances || [];
-
-                const myBalance = balances.find(
-                    b => b.userEmail === email
-                );
-
-                const totalIsOwed =
-                    myBalance && myBalance.netBalance > 0
-                        ? Number(myBalance.netBalance)
-                        : 0;
-
+                const totalIsOwed = await expenseDao.getTotalUserIsOwedInGroup(email, group);
                 return res.status(200).json({ totalIsOwed });
 
             } catch (error) {
