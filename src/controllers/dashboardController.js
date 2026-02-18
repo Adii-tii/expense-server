@@ -53,16 +53,11 @@ const dashboardController = {
     try {
 
       const { email: myEmail } = req.user;
-
-      /* -------- FIND USER GROUPS -------- */
-
       const groups = await Group.find({
         memberEmail: myEmail
       });
 
       const groupIds = groups.map(g => g._id);
-
-      /* -------- FETCH UNSETTLED EXPENSES -------- */
 
       const expenses = await expenseDao
         .getUnsettledExpensesForGroups(groupIds);
