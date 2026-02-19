@@ -187,30 +187,23 @@ const expenseDao = {
     },
 
     getExpensesGroupedByCategoryForUser: async (email) => {
-
-        /* -------- FIND USER GROUPS -------- */
-
-        const groups = await Group.find({
-            memberEmail: email
-        }).select("_id");
-
-        const groupIds = groups.map(g => g._id);
-
-        /* -------- AGGREGATE EXPENSES -------- */
-
         return await Expense.aggregate([
+            { $unwind: "$splits" },
+
             {
                 $match: {
-                    groupId: { $in: groupIds }
+                    "splits.email": email
                 }
             },
+
             {
                 $group: {
                     _id: "$category",
                     expenses: { $push: "$$ROOT" },
-                    totalAmount: { $sum: "$amount" }
+                    totalAmount: { $sum: "$splits.share" }
                 }
             },
+
             {
                 $project: {
                     _id: 0,
@@ -218,10 +211,12 @@ const expenseDao = {
                     expenses: 1,
                     totalAmount: 1
                 }
-            }
-        ]);
+            },
 
+            { $sort: { totalAmount: -1 } }
+        ]);
     },
+
 
     getUnsettledExpensesForGroups: async (groupIds) => {
 
