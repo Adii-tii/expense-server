@@ -1,10 +1,10 @@
 const groupDao = require("../dao/groupDao");
 const userDao = require("../dao/userDao");
 const Group = require("../models/group");
+const cloudinaryService = require("../services/cloudinaryService");
+
 
 const groupController = {
-
-
     create: async (req, res) => {
         const user = req.user;
 
@@ -29,7 +29,6 @@ const groupController = {
                 allMembers = [...new Set([...allMembers, ...memberEmail])];
             }
 
-            /* 🔥 Initialize balances for all members */
             const balances = allMembers.map(email => ({
                 userEmail: email,
                 netBalance: 0
@@ -111,6 +110,41 @@ const groupController = {
             });
         }
     },
+
+    uploadGroupThumbnail: async (req, res) => {
+        try {
+            const groupId = req.params.groupId;
+
+            if (!req.file) {
+                return res.status(400).json({ message: "No image provided" });
+            }
+
+            const result = await cloudinaryService.uploadImage(
+                req.file.buffer,
+                {
+                    folder: "group_thumbnails",
+                    publicId: `group_${groupId}`,
+                    transformation: [{ width: 256, height: 256, crop: "fill" }],
+                    mime: req.file.mimetype
+                }
+            );
+
+            const updatedGroup = await groupDao.updateGroupThumbnail(
+                groupId,
+                result.secure_url
+            );
+
+            return res.json({
+                thumbnail: result.secure_url,
+                group: updatedGroup
+            });
+
+        } catch (err) {
+            console.error("uploadGroupThumbnail error:", err);
+            return res.status(500).json({ message: "Thumbnail upload failed" });
+        }
+    },
+
 
 
     addMembers: async (req, res) => {

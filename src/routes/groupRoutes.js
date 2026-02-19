@@ -10,6 +10,10 @@ const authorizeMiddleware = require("../middlewares/authorizeMiddleware");
 const expenseRoutes = require("./expenseRoutes");
 const settlementRoutes = require("./settlementRoutes");
 
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
+
+
 console.log("GROUP ROUTES LOADED");
 
 /* ================= GROUP MANAGEMENT ================= */
@@ -75,6 +79,14 @@ router.get(
     authMiddleware.protect,
     expenseController.getPeopleIOwe
 );
+
+router.post(
+    "/:groupId/thumbnail",
+    authMiddleware.protect,
+    upload.single("image"),
+    groupController.uploadGroupThumbnail
+);
+
 
 // router.get(
 //     "/:groupId/people-who-owe-me",

@@ -18,6 +18,20 @@ const groupDao = {
         );
     },
 
+    updateGroupThumbnail: async (groupId, url) => {
+        try {
+            return await Group.findByIdAndUpdate(
+                groupId,
+                { thumbnail: url },
+                { new: true }
+            );
+        } catch (err) {
+            console.error("DAO updateGroupThumbnail error:", err);
+            throw err;
+        }
+    },
+
+
     addMembers: async (groupId, membersEmail) => {
         return await Group.findByIdAndUpdate(
             groupId,
@@ -26,11 +40,11 @@ const groupDao = {
                     memberEmail: { $each: membersEmail }
                 }
             },
-            { new: true }   
+            { new: true }
         );
     },
 
-    deleteGroup: async(groupId) => {
+    deleteGroup: async (groupId) => {
         return await Group.findByIdAndDelete(
             groupId
         )
@@ -48,7 +62,7 @@ const groupDao = {
         );
     },
 
-    getGroupById : async(groupId) => {
+    getGroupById: async (groupId) => {
         return await Group.findById(groupId);
     },
 
@@ -61,25 +75,25 @@ const groupDao = {
     },
 
     getAuditLog: async (groupId) => {
-        return await auditLogs.find({groupId}).sort({createdAt: -1});
+        return await auditLogs.find({ groupId }).sort({ createdAt: -1 });
     },
 
-    getGroupsByCreatedById : async(createdBy) => {
-        return await Group.find({createdBy}).select("-password");
+    getGroupsByCreatedById: async (createdBy) => {
+        return await Group.find({ createdBy }).select("-password");
     },
 
-    getGroupsPaginated: async(email, limit, skip,sortOptions ={createdAt: -1}) => {
+    getGroupsPaginated: async (email, limit, skip, sortOptions = { createdAt: -1 }) => {
         const [groups, totalCount] = await Promise.all([
             Group.find({
                 memberEmail: email
             }).sort(sortOptions)
-            .skip(skip)
-            .limit(limit),
+                .skip(skip)
+                .limit(limit),
 
-            Group.countDocuments({memberEmail:email}),
+            Group.countDocuments({ memberEmail: email }),
         ])
 
-        return {groups, totalCount};
+        return { groups, totalCount };
     },
 
     //since we have implemented pagination we do not have the entire data on the client device, we will perform sorting operations on the server itself
