@@ -22,5 +22,10 @@ router.get(
   dashboardController.getDashboardDebts
 );
 
+router.get(
+  "/recent-activities",
+  authMiddleware.protect,
+  dashboardController.getRecentActivities
+);
 
 module.exports = router;

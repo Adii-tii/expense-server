@@ -133,8 +133,75 @@ const dashboardController = {
         message: "Internal server error"
       });
     }
-  }
+  },
 
+  getRecentActivities: async (req, res) => {
+    try {
+      const { email: myEmail } = req.user;
+      const userGroups = await Group.find({ memberEmail: myEmail });
+      const groupIds = userGroups.map(g => g._id);
+
+      const [recentExpenses, recentSettlements] = await Promise.all([
+        expense.find({ groupId: { $in: groupIds } })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .lean(),
+        require("../models/settlement").find({ groupId: { $in: groupIds } })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .lean()
+      ]);
+
+      const groupMap = {};
+      userGroups.forEach(g => {
+        groupMap[g._id.toString()] = g.name;
+      });
+
+      const activities = [];
+
+      recentExpenses.forEach(exp => {
+        activities.push({
+          _id: exp._id,
+          type: "expense",
+          description: exp.description || exp.note || "Added an expense",
+          amount: exp.amount,
+          groupName: groupMap[exp.groupId.toString()] || "Group",
+          createdAt: exp.createdAt,
+          createdByName: exp.paidBy?.[0]?.email === myEmail ? "You" : exp.paidBy?.[0]?.email || "Someone"
+        });
+      });
+
+      recentSettlements.forEach(settle => {
+        activities.push({
+          _id: settle._id,
+          type: "settlement",
+          description: settle.note || `Settled payment`,
+          amount: settle.amount,
+          groupName: groupMap[settle.groupId.toString()] || "Group",
+          createdAt: settle.createdAt,
+          fromUserEmail: settle.fromUserEmail,
+          toUserEmail: settle.toUserEmail,
+          fromName: settle.fromUserEmail === myEmail ? "You" : settle.fromUserEmail,
+          toName: settle.toUserEmail === myEmail ? "You" : settle.toUserEmail
+        });
+      });
+
+      activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const recentActivities = activities.slice(0, 10);
+
+      return res.status(200).json({
+        success: true,
+        activities: recentActivities
+      });
+
+    } catch (error) {
+      console.error("Recent Activities Error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
+    }
+  }
 
 };
 
