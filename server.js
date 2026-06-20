@@ -11,11 +11,11 @@ const rbacRoutes = require('./src/routes/rbacRoutes');
 const paymentsRoutes = require('./src/routes/paymentsRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const settlementRoutes  = require('./src/routes/settlementRoutes');
-const dashboardRoutes = require('../expense-server/src/routes/dashboardRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
 
 const app = express();
 
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 mongoose.connect(process.env.MONGO_DB_CONNECTION_URL)
     .then(() => console.log("connection established successfully!"))
